@@ -1,16 +1,34 @@
 import SwiftUI
 import WebKit
-import Combine // <-- เพิ่มบรรทัดนี้เพื่อแก้ไข Error
+import Combine
 
 class WebViewModel: NSObject, ObservableObject, WKNavigationDelegate {
-    var webView: WKWebView = WKWebView()
+    var webView: WKWebView
 
     override init() {
-        super.init()
-        webView.navigationDelegate = self
+        // 1. สร้างชุดการตั้งค่า (Configuration) เพื่ออนุญาตการดูแบบ Full Screen
+        let configuration = WKWebViewConfiguration()
+        let preferences = WKPreferences()
         
-        // ตั้งค่า User Agent ให้เป็น Safari บน Mac เพื่อให้ YouTube แสดงผลแบบ Desktop สมบูรณ์
-        webView.customUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.4 Safari/605.1.15"
+        // เปิดอนุญาต HTML5 Fullscreen (รองรับตั้งแต่ macOS 12.1 เป็นต้นไป)
+        if #available(macOS 12.1, *) {
+            preferences.isElementFullscreenEnabled = true
+        } else {
+            // โค้ดสำรองสำหรับ macOS เวอร์ชันเก่า
+            preferences.setValue(true, forKey: "fullScreenEnabled")
+        }
+        
+        configuration.preferences = preferences
+        
+        // 2. นำการตั้งค่ามาใส่ในตอนเริ่มสร้าง WebView
+        self.webView = WKWebView(frame: .zero, configuration: configuration)
+        
+        super.init()
+        
+        self.webView.navigationDelegate = self
+        
+        // ตั้งค่า User Agent ให้เป็น Safari บน Mac
+        self.webView.customUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.4 Safari/605.1.15"
         
         load(url: "https://www.youtube.com")
     }
