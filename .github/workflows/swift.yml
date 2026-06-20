@@ -1,18 +1,13 @@
-# This workflow will build a Swift project
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-swift
-
 name: Build and Release macOS App
 
 on:
   push:
-    # สั่งให้ทำงานเฉพาะตอนที่มีการสร้าง Tag ชื่อขึ้นต้นด้วย v (เช่น v1.0, v2.1)
     tags:
       - 'v*'
 
 jobs:
   build-and-release:
     runs-on: macos-latest
-    # ต้องขอสิทธิ์ write เพื่อให้บอทสามารถเขียนไฟล์ลงหน้า Release ได้
     permissions:
       contents: write 
 
@@ -27,7 +22,6 @@ jobs:
 
     - name: Build macOS App
       run: |
-        # สั่ง Build แบบ Release และกำหนดโฟลเดอร์ส่งออก (SYMROOT) ให้หาง่ายๆ
         xcodebuild clean build \
           -project "Youtube.xcodeproj" \
           -scheme "Youtube" \
@@ -38,16 +32,17 @@ jobs:
           CODE_SIGNING_REQUIRED=NO \
           CODE_SIGNING_ALLOWED=NO
 
-    - name: Zip the App
+    - name: Sign and Package the App
       run: |
-        # เข้าไปที่โฟลเดอร์ที่แอปอยู่ แล้วบีบอัดเป็น .zip
         cd build/Release
-        zip -r Youtube-Mac.zip Youtube.app
+        # ประทับตรา Ad-Hoc
+        codesign --force --deep -s - Youtube.app
+        # บีบอัดด้วยวิธีมาตรฐานของ Apple
+        ditto -c -k --sequesterRsrc --keepParent Youtube.app Youtube-Mac.zip
 
     - name: Create GitHub Release and Upload
       uses: softprops/action-gh-release@v2
       with:
-        # นำไฟล์ Zip ที่ได้ไปแขวนไว้ในหน้า Release
         files: build/Release/Youtube-Mac.zip
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
